@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>23sync</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #050507;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #ff00ff;
+            --text: #f8fafc;
+            --ig-verified: #0095f6;
+            /* Cores de Hover Sociais */
+            --c-steam: #66c0f4;
+            --c-insta: #e1306c;
+            --c-tiktok: #00f2ea;
+            --c-discord: #5865f2;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: var(--bg);
+            font-family: 'Inter', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        canvas { position: absolute; top: 0; left: 0; z-index: 0; }
+
+        /* --- CARD DE PERFIL --- */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(1.5deg); }
+        }
+
+        .profile-card {
+            position: relative; z-index: 10;
+            width: 350px;
+            background: var(--card-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(255, 0, 255, 0.1);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .banner { width: 100%; height: 120px; background: linear-gradient(45deg, #000000, #000000); }
+        .avatar-container { margin-top: -50px; padding: 0 25px; }
+        .avatar { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--bg); background: #111; object-fit: cover; }
+        .content { padding: 15px 25px 30px; color: var(--text); }
+        
+        .name-wrapper { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+        .username { font-size: 1.5rem; font-weight: 700; margin: 0; }
+        .verified-badge { width: 18px; height: 18px; fill: var(--ig-verified); }
+        .tag { color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px; display: block; }
+
+        /* --- REDES SOCIAIS --- */
+        .social-grid { display: flex; gap: 12px; margin-top: 10px; }
+        
+        .social-item {
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            color: #ccc; text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer; position: relative;
+        }
+
+        .social-item:hover { transform: translateY(-5px); color: #fff; background: rgba(255,255,255,0.1); }
+        
+        .steam:hover { color: var(--c-steam); box-shadow: 0 0 15px rgba(102, 192, 244, 0.3); }
+        .insta:hover { color: var(--c-insta); box-shadow: 0 0 15px rgba(225, 48, 108, 0.3); }
+        .tiktok:hover { color: var(--c-tiktok); box-shadow: 0 0 15px rgba(0, 242, 234, 0.3); }
+        .discord:hover { color: var(--c-discord); box-shadow: 0 0 15px rgba(88, 101, 242, 0.3); }
+
+        /* Tooltip de Cópia */
+        .copy-alert {
+            position: absolute; bottom: 55px; left: 50%; transform: translateX(-50%);
+            background: var(--c-discord); color: white; padding: 6px 10px;
+            border-radius: 8px; font-size: 10px; font-weight: bold;
+            opacity: 0; pointer-events: none; transition: 0.3s;
+            white-space: nowrap;
+        }
+        .copy-alert::after {
+            content: ''; position: absolute; top: 100%; left: 50%;
+            transform: translateX(-50%); border: 5px solid transparent;
+            border-top-color: var(--c-discord);
+        }
+
+        /* --- MINI PLAYER (Canto Inferior) --- */
+        .mini-player {
+            position: absolute; bottom: 20px; left: 20px; z-index: 100;
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
+            border: 1px solid var(--border); padding: 8px 12px; border-radius: 16px;
+            display: flex; flex-direction: column; gap: 6px; width: 180px;
+        }
+        .track-box { display: flex; align-items: center; gap: 8px; }
+        .track-cover { width: 32px; height: 32px; border-radius: 6px; }
+        .track-name { font-size: 11px; font-weight: 700; color: white; margin: 0; }
+        .controls { display: flex; align-items: center; justify-content: space-between; }
+        .p-btn { background: none; border: none; color: white; cursor: pointer; opacity: 0.7; }
+        .play-main { background: var(--accent); border-radius: 50%; padding: 4px; opacity: 1; }
+        input[type=range] { width: 40px; accent-color: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+    <audio id="mainAudio"></audio>
+
+    <div class="mini-player">
+        <div class="track-box">
+            <img src="https://picsum.photos/100?random=1" id="trackCover" class="track-cover">
+            <div class="track-details">
+                <p id="trackName" class="track-name" style="font-size: 10px;">Música</p>
+                <p id="trackArtist" style="font-size: 8px; margin: 0; color: #94a3b8;">Artista</p>
+            </div>
+        </div>
+        <div class="controls">
+            <div style="display: flex; gap: 4px;">
+                <button class="p-btn" onclick="prevTrack()"><i data-lucide="skip-back" size="12"></i></button>
+                <button class="p-btn play-main" id="playBtn" onclick="togglePlay()"><i data-lucide="play" size="12"></i></button>
+                <button class="p-btn" onclick="nextTrack()"><i data-lucide="skip-forward" size="12"></i></button>
+            </div>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+        </div>
+    </div>
+
+    <div class="profile-card">
+        <div class="banner"></div>
+        <div class="avatar-container">
+            <img src="Avatar.jpg" alt="Avatar" class="avatar">
+        </div>
+        <div class="content">
+            <div class="name-wrapper">
+                <h2 class="username">sync</h2>
+                <svg class="verified-badge" viewBox="0 0 40 40"><path d="M19.998 3.125C10.68 3.125 3.125 10.68 3.125 20s7.555 16.875 16.873 16.875c9.318 0 16.875-7.555 16.875-16.875s-7.557-16.875-16.875-16.875zm8.391 13.541l-9.062 9.062a1.875 1.875 0 01-2.651 0l-4.531-4.531a1.875 1.875 0 012.651-2.651l3.205 3.205 7.738-7.738a1.875 1.875 0 012.651 2.651z"/></svg>
+            </div>
+            <span class="tag">@23sync</span>
+
+            <div class="social-grid">
+                <a href="https://steamcommunity.com/profiles/76561199510490418/" target="_blank" class="social-item steam">
+                    <i data-lucide="gamepad-2" size="20"></i>
+                </a>
+                <a href="https://www.instagram.com/23sync/" target="_blank" class="social-item insta">
+                    <i data-lucide="instagram" size="20"></i>
+                </a>
+                <a href="https://www.tiktok.com/@23sync_" target="_blank" class="social-item tiktok">
+                    <i data-lucide="music-2" size="20"></i>
+                </a>
+                <div class="social-item discord" onclick="copyDiscord('61661616')">
+                    <i data-lucide="message-square" size="20"></i>
+                    <span class="copy-alert" id="copyAlert">Nome de usuário copiado!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // FUNÇÃO COPIAR DISCORD
+        function copyDiscord(nick) {
+            navigator.clipboard.writeText(nick);
+            const alert = document.getElementById('copyAlert');
+            alert.style.opacity = "1";
+            setTimeout(() => { alert.style.opacity = "0"; }, 2000);
+        }
+
+        // PLAYER LOGIC
+        const playlist = [
+            { name: "Reunion", artist: "Korea Girl", cover: "ReunionTumb.jpg", file: "Reunion.mp3" },
+            { name: "Cinnamon Girl", artist: "Lana Del Rey", cover: "CinnamonTumb.jpg", file: "Cinnamon Girl.mp3" }
+        ];
+        let trackIndex = 0;
+        const audio = document.getElementById('mainAudio');
+        const playBtn = document.getElementById('playBtn');
+        const trackCover = document.getElementById('trackCover');
+        const trackName = document.getElementById('trackName');
+        const trackArtist = document.getElementById('trackArtist');
+        const volumeSlider = document.getElementById('volumeSlider');
+
+        function loadTrack(index) {
+            const track = playlist[index];
+            audio.src = track.file;
+            trackName.innerText = track.name;
+            trackArtist.innerText = track.artist;
+            trackCover.src = track.cover;
+        }
+        function togglePlay() {
+            if (audio.paused) { audio.play(); playBtn.innerHTML = '<i data-lucide="pause" size="12"></i>'; }
+            else { audio.pause(); playBtn.innerHTML = '<i data-lucide="play" size="12"></i>'; }
+            lucide.createIcons();
+        }
+        function nextTrack() { trackIndex = (trackIndex + 1) % playlist.length; loadTrack(trackIndex); audio.play(); lucide.createIcons(); }
+        function prevTrack() { trackIndex = (trackIndex - 1 + playlist.length) % playlist.length; loadTrack(trackIndex); audio.play(); lucide.createIcons(); }
+        
+        volumeSlider.addEventListener('input', (e) => audio.volume = e.target.value);
+        loadTrack(trackIndex);
+
+        // BACKGROUND PARTICLES
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+        window.onresize();
+        window.addEventListener('mousemove', (e) => { for(let i=0; i<2; i++) particles.push(new Particle(e.x, e.y)); });
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+                this.color = `hsla(${Math.random() > 0.5 ? 330 : 300}, 100%, 65%, 0.4)`;
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; if (this.size > 0.1) this.size -= 0.02; }
+            draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+        }
+        function animate() {
+            ctx.fillStyle = 'rgba(5, 5, 7, 0.2)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, i) => { p.update(); p.draw(); if (p.size <= 0.1) particles.splice(i, 1); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
